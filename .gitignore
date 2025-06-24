@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+
+# Dir env
+.direnv
+
+# Aider.chat files
+.aider*
+
+# Generated scene files
+scene.gltf
