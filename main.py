@@ -55,7 +55,7 @@ async def keyword_search_items(query: str) -> str:
     Do not rely on this for open-ended exploration. Prefer semantic search first.
     """
 
-    result = await search_entity(query, type="item")
+    result = await utils.search_entity(query, type="item")
     result_values = result.values()
     result_strings = map(lambda r: str(r), result_values)
     concatenated = "\n".join(result_strings)
