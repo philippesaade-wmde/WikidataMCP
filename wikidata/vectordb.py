@@ -3,8 +3,6 @@ import requests
 from .utils import WikidataEntity
 from . import utils
 
-from dataclasses import dataclass
-
 
 async def get_wikidata_items_similar_to(
     query: str, x_api_key: str, type: str = "item", resolve_labels: bool = False
@@ -52,6 +50,7 @@ async def get_wikidata_items_similar_to(
                 vectordb_result,
             )
         )
+
 
 __all__ = [
     "get_wikidata_items_similar_to",
