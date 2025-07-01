@@ -1,6 +1,8 @@
 import requests
-from wikidata import WikidataEntity
-import wikidata
+
+from .wikidata import WikidataEntity
+from . import wikidata
+
 from dataclasses import dataclass
 
 

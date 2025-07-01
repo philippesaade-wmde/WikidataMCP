@@ -1,7 +1,8 @@
 import argparse
 from fastmcp import FastMCP
-import wikidata
-import MCP.wikidata_vectordb as wikidata_vectordb
+
+from . import wikidata
+from . import wikidata_vectordb
 
 
 parser = argparse.ArgumentParser()
@@ -54,7 +55,7 @@ async def keyword_search_items(query: str) -> str:
     Do not rely on this for open-ended exploration. Prefer semantic search first.
     """
 
-    result = await wikidata.search_entity(query, type="item")
+    result = await search_entity(query, type="item")
     result_values = result.values()
     result_strings = map(lambda r: str(r), result_values)
     concatenated = "\n".join(result_strings)
@@ -116,7 +117,3 @@ async def execute_sparql(sparql: str) -> str:
     except ValueError as e:
         return str(e)
     return result.to_string()
-
-
-if __name__ == "__main__":
-    mcp.run()
