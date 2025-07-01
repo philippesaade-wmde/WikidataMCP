@@ -3,10 +3,12 @@
 set -e
 
 set -a
-source .env
+if [ -f .env ]; then
+  source .env
+fi
 set +a
 
 cd /workspace
 
 echo "Starting MCP"
-exec python3 MCP/server.py
+exec uv run python3 main.py
