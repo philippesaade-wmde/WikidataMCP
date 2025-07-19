@@ -186,6 +186,8 @@ async def get_entities_labels_and_descriptions(
 
 
 async def _parse_snak_value(datatype, value, entities) -> WikidataEntity | str:
+    if value is None:
+        return '<empty string>'
 
     if (datatype in ["wikibase-property", "wikibase-item"]):
         value_id = value.get("id")

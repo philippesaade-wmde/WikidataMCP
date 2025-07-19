@@ -1,5 +1,4 @@
-mcp
 fastmcp
-
+requests
 pydantic
 pandas

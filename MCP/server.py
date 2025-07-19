@@ -1,18 +1,14 @@
-import argparse
 from fastmcp import FastMCP
 import wikidata
-import MCP.wikidata_vectordb as wikidata_vectordb
+import wikidata_vectordb
+import os
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument("-s", "--secret", required=True)
-args = parser.parse_args()
-x_api_key = args.secret
+x_api_key = os.environ.get("WD_VECTORDB_API_SECRET")
 if x_api_key is None:
     raise ValueError("WD_VECTORDB_API_SECRET env variable not set")
 
 
-mcp = FastMCP("FastMCP Server for wd-vectordb 🚀")  # type: ignore[var-annotated]
+mcp = FastMCP("FastMCP Server for wd-vectordb 🚀")
 
 
 @mcp.tool()

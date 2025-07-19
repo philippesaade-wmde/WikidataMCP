@@ -1,0 +1,7 @@
+services:
+  wikidatamcp:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - WD_VECTORDB_API_SECRET
