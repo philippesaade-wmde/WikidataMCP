@@ -1,7 +1,7 @@
 import requests
-from wikidata import WikidataEntity
-import wikidata
-from dataclasses import dataclass
+
+from .utils import WikidataEntity
+from . import utils
 
 
 async def get_wikidata_items_similar_to(
@@ -37,7 +37,7 @@ async def get_wikidata_items_similar_to(
         )
     else:
         ids = [x[id_name] for x in vectordb_result]
-        labels_descriptions = await wikidata.get_entities_labels_and_descriptions(ids)
+        labels_descriptions = await utils.get_entities_labels_and_descriptions(ids)
 
         return list(
             map(
@@ -50,6 +50,7 @@ async def get_wikidata_items_similar_to(
                 vectordb_result,
             )
         )
+
 
 __all__ = [
     "get_wikidata_items_similar_to",

@@ -5,3 +5,4 @@ services:
       - .env
     environment:
       - WD_VECTORDB_API_SECRET
+    container_name: wikidatamcp

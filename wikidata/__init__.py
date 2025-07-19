@@ -1,0 +1,1 @@
+"""Wikidata MCP server"""

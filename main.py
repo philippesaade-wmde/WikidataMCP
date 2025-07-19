@@ -1,6 +1,6 @@
 from fastmcp import FastMCP
-import wikidata
-import wikidata_vectordb
+from wikidata import utils
+from wikidata import vectordb
 import os
 
 x_api_key = os.environ.get("WD_VECTORDB_API_SECRET")
@@ -25,7 +25,7 @@ async def vector_search_items(query: str) -> str:
     Assume the results are relevant unless proven otherwise. Always explore them before querying.
     """
 
-    result = await wikidata_vectordb.get_wikidata_items_similar_to(
+    result = await vectordb.get_wikidata_items_similar_to(
         query,
         x_api_key,
         resolve_labels=True,
@@ -50,7 +50,7 @@ async def keyword_search_items(query: str) -> str:
     Do not rely on this for open-ended exploration. Prefer semantic search first.
     """
 
-    result = await wikidata.search_entity(query, type="item")
+    result = await utils.search_entity(query, type="item")
     result_values = result.values()
     result_strings = map(lambda r: str(r), result_values)
     concatenated = "\n".join(result_strings)
@@ -70,11 +70,12 @@ async def keyword_search_properties(query: str) -> str:
     Validate property usage by inspecting actual entities with `get_entity`.
     """
 
-    result = await wikidata.search_entity(query, type="property")
+    result = await utils.search_entity(query, type="property")
     result_values = result.values()
     result_strings = map(lambda r: str(r), result_values)
     concatenated = "\n".join(result_strings)
     return concatenated
+
 
 @mcp.tool()
 async def get_wikidata_entity(entity_id: str) -> str:
@@ -90,8 +91,9 @@ async def get_wikidata_entity(entity_id: str) -> str:
     Always do this before writing SPARQL.
     """
 
-    result = await wikidata.get_entities_with_claims([entity_id])
+    result = await utils.get_entities_with_claims([entity_id])
     return str(result[entity_id])
+
 
 @mcp.tool()
 async def execute_sparql(sparql: str) -> str:
@@ -108,7 +110,7 @@ async def execute_sparql(sparql: str) -> str:
     """
 
     try:
-        result = await wikidata.execute_sparql(sparql)
+        result = await utils.execute_sparql(sparql)
     except ValueError as e:
         return str(e)
     return result.to_string()
