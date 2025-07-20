@@ -17,7 +17,10 @@ async def get_wikidata_items_similar_to(
 
     response = requests.get(
         f"https://wd-vectordb.toolforge.org/{type}/query/?query={query}&k=10",
-        headers={"x-api-secret": x_api_key},
+        headers={
+            "x-api-secret": x_api_key,
+            "User-Agent": "Wikidata MCP Client",
+        },
     )
 
     vectordb_result: list[dict[str, str]] = response.json()

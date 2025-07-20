@@ -118,7 +118,8 @@ async def search_entity(
         f"limit={limit}&"
         "language=en&"
         "format=json&"
-        "origin=*"
+        "origin=*",
+        headers={"User-Agent": "Wikidata MCP Client"},
     )
     response.raise_for_status()
 
@@ -157,7 +158,8 @@ async def get_entities_labels_and_descriptions(
             f"ids={ids_param}&"
             f"languages=en|mul&"
             "format=json&"
-            "origin=*"
+            "origin=*",
+            headers={"User-Agent": "Wikidata MCP Client"},
         )
         response.raise_for_status()
         entities_data = response.json().get("entities", {})
@@ -510,7 +512,8 @@ async def get_entities_with_claims(entity_ids: list[str]) -> dict[str, WikidataE
         "props=claims&"
         f"ids={'|'.join(entity_ids)}&"
         "format=json&"
-        "origin=*"
+        "origin=*",
+        headers={"User-Agent": "Wikidata MCP Client"},
     )
     response.raise_for_status()
     raw_api_data = response.json()
