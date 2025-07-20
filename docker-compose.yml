@@ -6,3 +6,5 @@ services:
     environment:
       - WD_VECTORDB_API_SECRET
     container_name: wikidatamcp
+    ports:
+      - "8000:8000"

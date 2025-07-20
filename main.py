@@ -5,10 +5,11 @@ import os
 
 x_api_key = os.environ.get("WD_VECTORDB_API_SECRET")
 if x_api_key is None:
-    raise ValueError("WD_VECTORDB_API_SECRET env variable not set")
+    pass
+    # raise ValueError("WD_VECTORDB_API_SECRET env variable not set")
 
 
-mcp = FastMCP("FastMCP Server for wd-vectordb 🚀")
+mcp = FastMCP("Wikidata MCP")
 
 
 @mcp.tool()
@@ -117,4 +118,6 @@ async def execute_sparql(sparql: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    import sys
+    print("Using HTTP transport on 0.0.0.0:8000", file=sys.stderr)
+    mcp.run(transport="http", host="0.0.0.0", port=8000, path='/mcp')
