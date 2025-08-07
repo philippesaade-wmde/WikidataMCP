@@ -7,7 +7,7 @@ WORKDIR /workspace
 # Install backend dependencies
 COPY --chmod=755 pyproject.toml .
 COPY --chmod=755 uv.lock .
-RUN uv sync
+RUN uv sync --locked
 
 # Copy backend for production
 COPY --chmod=755 . .
