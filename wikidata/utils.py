@@ -2,6 +2,7 @@ from urllib.parse import urlencode
 import requests
 import pandas as pd
 import re
+import sys
 
 async def keywordsearch(query: str,
                         type: str = "item",
@@ -48,7 +49,7 @@ async def keywordsearch(query: str,
     return item_dict
 
 
-async def vectorsearch_verify_apikey(x_api_key: str) -> list:
+def vectorsearch_verify_apikey(x_api_key: str) -> bool:
     """
     Verifies if the provided API key is valid for vector search.
 
@@ -61,14 +62,18 @@ async def vectorsearch_verify_apikey(x_api_key: str) -> list:
     if not x_api_key:
         return False
 
-    response = requests.get(
-        f"https://wd-vectordb.toolforge.org/item/query/?query=",
-        headers={
-            "x-api-secret": x_api_key,
-            "User-Agent": "Wikidata MCP Client",
-        },
-    )
-    return response.status_code != 401
+    try:
+        response = requests.get(
+            f"https://wd-vectordb.toolforge.org/item/query/?query=",
+            headers={
+                "x-api-secret": x_api_key,
+                "User-Agent": "Wikidata MCP Client",
+            },
+        )
+        return response.status_code != 401
+    except:
+        return False
+
 
 async def vectorsearch(query: str,
                        x_api_key: str,

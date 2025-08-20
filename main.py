@@ -75,8 +75,7 @@ if VECTOR_ENABLED:
 else:
     print(
         "WD_VECTORDB_API_SECRET not set: \
-        vector search tools are not registered.",
-        file=sys.stderr,
+        vector search tools are not registered."
     )
 
 @mcp.tool()
@@ -184,6 +183,4 @@ async def execute_sparql(sparql: str, K: int = 10) -> str:
 
 
 if __name__ == "__main__":
-    import sys
-    print("Using HTTP transport on 0.0.0.0:8000", file=sys.stderr)
     mcp.run(transport="http", host="0.0.0.0", port=8000, path='/mcp')
