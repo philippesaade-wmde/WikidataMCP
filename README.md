@@ -14,17 +14,19 @@ Returns a list of semantically similar QIDs with labels and descriptions.
 Performs keyword search over Wikidata item labels, aliases, and descriptions.
 Returns matching QIDs with their labels and descriptions.
 
-**Use When**: You know the expected label or terminology used in Wikidata.
+**Use When**: You know the expected label or terminology used in a Wikidata item.
 
 3. `vector_search_properties(query: str) -> str`
 Performs semantic search over Wikidata properties using vector embeddings.
 Returns a list of semantically similar PIDs with labels and descriptions.
 
-4. `keyword_search_properties(query: str) -> str`
+**Use When**: You want to identify relevant properties for building claims or SPARQL queries.
+
+5. `keyword_search_properties(query: str) -> str`
 Performs keyword search over Wikidata property labels, aliases, and descriptions.
 Returns matching PIDs with their labels and descriptions.
 
-**Use When**: You want to identify relevant properties for building claims or SPARQL queries.
+**Use When**: You know the expected label or terminology used in a Wikidata property.
 
 5. `get_wikidata_entity(entity_id: str) -> str`
 Returns all direct graph connections (statements) of a Wikidata entity in a triplet format, includes all claim values and their qualifiers.
