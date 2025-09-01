@@ -6,7 +6,7 @@ The **Wikidata MCP (Model Context Protocol)** provides a set of standardized too
 ## 🧰 Tools
 1. `vector_search_items(query: str) -> str`
 Performs semantic search over Wikidata items using vector embeddings.
-Returns a list of QIDs with labels and descriptions.
+Returns a list of semantically similar QIDs with labels and descriptions.
 
 **Use When**: Starting the exploration process with vague, conceptual, or open-ended queries.
 
@@ -16,18 +16,22 @@ Returns matching QIDs with their labels and descriptions.
 
 **Use When**: You know the expected label or terminology used in Wikidata.
 
-3. `keyword_search_properties(query: str) -> str`
+3. `vector_search_properties(query: str) -> str`
+Performs semantic search over Wikidata properties using vector embeddings.
+Returns a list of semantically similar PIDs with labels and descriptions.
+
+4. `keyword_search_properties(query: str) -> str`
 Performs keyword search over Wikidata property labels, aliases, and descriptions.
 Returns matching PIDs with their labels and descriptions.
 
 **Use When**: You want to identify relevant properties for building claims or SPARQL queries.
 
-4. `get_wikidata_entity(entity_id: str) -> str`
+5. `get_wikidata_entity(entity_id: str) -> str`
 Returns all direct graph connections (statements) of a Wikidata entity in a triplet format, includes all claim values and their qualifiers.
 
 **Use When**: You need to understand the structure of a Wikidata entity and how it connects to other items.
 
-5. `execute_sparql(sparql: str) -> str`
+6. `execute_sparql(sparql: str) -> str`
 Executes any valid SPARQL query against Wikidata and returns the results as a plain-text table.
 
 **Use when**: You want to test, verify, or retrieve structured results based on conditions.
@@ -57,5 +61,6 @@ This service returns readable triplet or textual representations of Wikidata ent
 ## 📅 Future Updates
 * **Hybrid Search**: The upcoming update of the vector search will integrate keyword search, eliminating the need for separate tools.
 * **API Key Removal**: Future versions of the vector database will drop the requirement for an API key.
+* **Get Entity Hierarchy Tool**: When writing a SPARQL query, users tend to explore the "instance of" and "subclass of" hierarchy of entities to understand what classification level to filter for. This new tool will output the full hierarchical path of an entity.
 * **Property Example Tool**: Inspired by [SPINACH](https://spinach.genie.stanford.edu/), a new tool will provide examples of how specific properties are used in Wikidata.
 
