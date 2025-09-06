@@ -28,12 +28,17 @@ Returns matching PIDs with their labels and descriptions.
 
 **Use When**: You know the expected label or terminology used in a Wikidata property.
 
-5. `get_wikidata_entity(entity_id: str) -> str`
+5. `get_entity_claims(entity_id: str) -> str`
 Returns all direct graph connections (statements) of a Wikidata entity in a triplet format, includes all claim values and their qualifiers.
 
 **Use When**: You need to understand the structure of a Wikidata entity and how it connects to other items.
 
-6. `execute_sparql(sparql: str) -> str`
+6. `get_claim_values(entity_id: str, property_id: str) -> str`
+Get all values for a specific claim (entity-property pair), including all qualifiers, ranks and references. This is the only tool that gets references and values that are deprecated.
+
+**Use When**: References or deprecated values are relevant, for example in fact-checking systems.
+
+7. `execute_sparql(sparql: str) -> str`
 Executes any valid SPARQL query against Wikidata and returns the results as a plain-text table.
 
 **Use when**: You want to test, verify, or retrieve structured results based on conditions.
