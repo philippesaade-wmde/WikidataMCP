@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "Wikidata MCP": {
+      "command": "uv",
+      "args": [
+        "run",
+        "fastmcp",
+        "run",
+        "./main.py"
+      ],
+      "env": {},
+      "transport": "stdio"
+    }
+  }
+}

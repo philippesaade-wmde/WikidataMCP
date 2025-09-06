@@ -4,8 +4,11 @@ import os
 
 mcp = FastMCP("Wikidata MCP")
 
-x_api_key = os.environ.get("WD_VECTORDB_API_SECRET")
-VECTOR_ENABLED = utils.vectorsearch_verify_apikey(x_api_key)
+WD_VECTORDB_API_SECRET = os.environ.get("WD_VECTORDB_API_SECRET")
+LANGUAGE = os.environ.get("LANGUAGE", "en")
+
+VECTOR_ENABLED = WD_VECTORDB_API_SECRET and \
+                utils.vectorsearch_verify_apikey(WD_VECTORDB_API_SECRET)
 
 # Enable vector search if the API key is set
 if VECTOR_ENABLED:
@@ -30,7 +33,8 @@ if VECTOR_ENABLED:
 
         results = await utils.vectorsearch(
             query,
-            x_api_key,
+            WD_VECTORDB_API_SECRET,
+            lang=LANGUAGE
         )
 
         text_val = [
@@ -61,8 +65,9 @@ if VECTOR_ENABLED:
 
         results = await utils.vectorsearch(
             query,
-            x_api_key,
+            WD_VECTORDB_API_SECRET,
             type="property",
+            lang=LANGUAGE
         )
 
         text_val = [
@@ -96,7 +101,11 @@ async def keyword_search_items(query: str) -> str:
         Q28421831: Douglas Adams — American environmental engineer
     """
 
-    results = await utils.keywordsearch(query, type="item")
+    results = await utils.keywordsearch(
+        query,
+        type="item",
+        lang=LANGUAGE
+    )
 
     text_val = [
         f"{id}: {val['label']} — {val['description']}"
@@ -124,7 +133,11 @@ async def keyword_search_properties(query: str) -> str:
         P276: location — location of the object, structure or event
     """
 
-    results = await utils.keywordsearch(query, type="property")
+    results = await utils.keywordsearch(
+        query,
+        type="property",
+        lang=LANGUAGE
+    )
 
     text_val = [
         f"{id}: {val['label']} — {val['description']}"
@@ -135,16 +148,18 @@ async def keyword_search_properties(query: str) -> str:
 
 
 @mcp.tool()
-async def get_entity_claims(entity_id: str) -> str:
-    """Return the direct statements (property→value pairs, with qualifiers) for an entity.
+async def get_entity_claims(entity_id: str,
+                            include_external_ids: bool = False) -> str:
+    """Return the direct statements (property-value pairs, with qualifiers) of an entity.
     Expose all direct graph connections of a Wikidata entity to inspect its factual context.
 
     Args:
         entity_id: A QID or PID such as "Q42" or "P31".
+        include_external_ids: Whether to include external identifiers linking to other databases.
 
     Returns:
         One statement per line in the form:
-          Label (QID): Property (PID): Value (item (QID) or literal) [ | Qualifier (PID): Value ... ]
+          Entity (QID): Property (PID): Value (item (QID) or literal) [ | Qualifier (PID): Value ... ]
 
     Example:
         >>> get_entity_claims("Q42")
@@ -152,8 +167,94 @@ async def get_entity_claims(entity_id: str) -> str:
         Douglas Adams (Q42): occupation (P106): novelist (Q6625963) | start time (P580): 1979 AD)
     """
 
-    result = await utils.get_entities_triplets([entity_id])
+    result = await utils.get_entities_triplets(
+        [entity_id],
+        external_ids=include_external_ids,
+        all_ranks=False,
+        lang=LANGUAGE
+    )
     return result.get(entity_id, f"Entity {entity_id} not found")
+
+
+@mcp.tool()
+async def get_claim_values(entity_id: str,
+                           property_id: str) -> str:
+    """Get all values for a specific claim (entity-property pair), including all qualifiers, ranks and references.
+    Returns complete claim information including deprecated statements and reference data that are excluded from get_entity_claims.
+
+    Args:
+        entity_id: A QID or PID such as "Q42" or "P31".
+        property_id: A PID such as "P31"
+
+    Returns:
+        Complete claim details with hierarchical structure showing:
+          Entity (QID): Property (PID): Value (QID or literal)
+          Rank: preferred/normal/deprecated
+          Qualifier:
+            - qualifier_property (PID): qualifier_value
+          Reference N:
+            - reference_property (PID): reference_value
+
+    Example:
+        >>> get_claim_values("Q42", "P106")
+        Douglas Adams (Q42): occupation (P106): novelist (Q6625963)
+          Rank: normal
+          Qualifier:
+            - start time (P580): 1979
+          Reference 1:
+            - stated in (P248): Who's Who (Q2567271)
+            - Who's Who UK ID (P4789): U4994
+    """
+
+    result = await utils.get_triplet_values(
+        [entity_id],
+        pid=property_id,
+        external_ids=True,
+        references=True,
+        all_ranks=True,
+        lang=LANGUAGE
+    )
+
+    entity = result.get(entity_id)
+    if not entity:
+        return f"Entity {entity_id} not found"
+
+    claims = entity.get("claims")
+    if not claims:
+        return f"No statement found for {entity_id} with property {property_id}"
+
+    output = ""
+    for claim in claims:
+        for claim_value in claim.get("values", []):
+            if output:
+                output += "\n"
+
+            output += f"{entity['label']} ({entity_id}): "
+            output += f"{claim['property_label']} ({property_id}): "
+            output += f"{utils.stringify(claim_value['value'])}\n"
+
+            output += f"  Rank: {claim_value.get('rank', 'normal')}\n"
+
+            qualifiers = claim_value.get("qualifiers", [])
+            if qualifiers:
+                output += f"  Qualifier:\n"
+                for qualifier in qualifiers:
+                    output += f"    - {qualifier['property_label']} ({qualifier['PID']}): "
+                    output += utils.stringify(qualifier)
+                    output += "\n"
+
+            refernces = claim_value.get("references", [])
+            if refernces:
+                i = 1
+                for reference in refernces:
+                    output += f"  Reference {i}:\n"
+                    for reference_claim in reference:
+                        output += f"    - {reference_claim['property_label']} ({reference_claim['PID']}): "
+                        output += utils.stringify(reference_claim)
+                        output += "\n"
+                    i += 1
+
+    return output.strip()
 
 
 @mcp.tool()
