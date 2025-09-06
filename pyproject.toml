@@ -8,6 +8,7 @@ dependencies = [
     "fastmcp>=2.9.2",
     "pandas>=2.3.0",
     "requests>=2.32.4",
+    "uvicorn>=0.35.0",
 ]
 
 [dependency-groups]
