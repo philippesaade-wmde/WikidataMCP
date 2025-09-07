@@ -3,9 +3,7 @@ from wikidata import utils
 import os
 
 mcp = FastMCP("Wikidata MCP")
-
-app = mcp.http_app()
-mcp.mount("/mcp", app, name="mcp")
+app = mcp.streamable_http_app()
 
 WD_VECTORDB_API_SECRET = os.environ.get("WD_VECTORDB_API_SECRET")
 LANGUAGE = os.environ.get("LANGUAGE", "en")
