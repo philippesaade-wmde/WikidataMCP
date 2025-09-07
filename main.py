@@ -285,4 +285,4 @@ async def execute_sparql(sparql: str, K: int = 10) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="http", host="0.0.0.0", port=8000, path='/mcp')
+    mcp.run(transport="http", host="0.0.0.0", path='/mcp')
