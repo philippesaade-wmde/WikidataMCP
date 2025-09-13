@@ -62,6 +62,9 @@ def vectorsearch_verify_apikey(x_api_key: str) -> bool:
         bool: True if the API key is valid, False otherwise.
     """
     try:
+        if not x_api_key:
+            x_api_key = ''
+
         response = requests.get(
             f"{VECTOR_SEARCH_URI}/item/query/?query=",
             headers={
