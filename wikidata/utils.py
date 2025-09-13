@@ -3,8 +3,7 @@ import requests
 import pandas as pd
 import re
 
-# VECTOR_SEARCH_URI = "https://wd-vectordb.toolforge.org"
-VECTOR_SEARCH_URI = "http://localhost:8000"
+VECTOR_SEARCH_URI = "https://wd-vectordb.toolforge.org"
 
 
 async def keywordsearch(query: str,
@@ -62,9 +61,6 @@ def vectorsearch_verify_apikey(x_api_key: str) -> bool:
     Returns:
         bool: True if the API key is valid, False otherwise.
     """
-    if not x_api_key:
-        return False
-
     try:
         response = requests.get(
             f"{VECTOR_SEARCH_URI}/item/query/?query=",
@@ -298,11 +294,3 @@ def stringify(value) -> str:
         if 'amount' in value:
             return f"{value.get('amount')} {value.get('unit', '')}".strip()
     return str(value)
-
-__all__ = [
-    "keywordsearch",
-    "vectorsearch",
-    "execute_sparql"
-    "get_entities_labels_and_descriptions",
-    "get_entities_triplets",
-]
