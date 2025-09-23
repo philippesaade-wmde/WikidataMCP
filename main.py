@@ -35,7 +35,7 @@ async def docs():
 
     prompt = await mcp.get_prompt("explore_wikidata")
     prompt = await prompt.render({"query": "[User Prompt]"})
-    prompt = markdown(prompt[0].content.text.strip())
+    prompt = markdown(prompt[0].content.text)
 
 
     return f"""<!doctype html>

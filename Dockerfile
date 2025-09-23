@@ -13,4 +13,4 @@ RUN uv sync --locked
 COPY --chmod=755 . .
 
 # Container start script
-CMD [ "uv", "run", "main.py" ]
+CMD [ "uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000" ]
