@@ -1,5 +1,8 @@
-# WikidataMCP
+# Wikidata MCP
 The **Wikidata MCP (Model Context Protocol)** provides a set of standardized tools that allow large language models (LLMs) to explore and query Wikidata programmatically. It is designed for agentic AI or AI workflows that need to search, inspect, and query Wikidata, without relying on hardcoded assumptions about its structure or content.
+
+The Wikidata MCP server is running at [https://wd-mcp.wmcloud.org/](https://wd-mcp.wmcloud.org/) \
+You can connect your AI application to it at [https://wd-mcp.wmcloud.org/mcp/](https://wd-mcp.wmcloud.org/mcp/)
 
 ---
 
@@ -48,10 +51,10 @@ Executes any valid SPARQL query against Wikidata and returns the results as a pl
 ## 🌐 Services
 ### Vector Search
 
-This service interfaces with the [Wikidata Vector Database](https://wd-vectordb.toolforge.org/), enabling semantic search over Wikidata items using natural language. It is ideal for discovering relevant items without needing to know exact labels. This serves as a first step in exploratory or context-rich workflows.
+This service interfaces with the [Wikidata Vector Database](https://wd-vectordb.wmcloud.org/), enabling semantic search over Wikidata items using natural language. It is ideal for discovering relevant items without needing to know exact labels. This serves as a first step in exploratory or context-rich workflows.
 
-🚀 API: [wd-vectordb.toolforge.org](https://wd-vectordb.toolforge.org/) \
-📚 Docs: [wd-vectordb.toolforge.org/docs](https://wd-vectordb.toolforge.org/docs) \
+🚀 API: [wd-vectordb.wmcloud.org](https://wd-vectordb.wmcloud.org/) \
+📚 Docs: [wd-vectordb.wmcloud.org/docs](https://wd-vectordb.wmcloud.org/docs) \
 📄 Project Page: [Wikidata Embedding Project](https://www.wikidata.org/wiki/Wikidata:Embedding_Project)
 
 
