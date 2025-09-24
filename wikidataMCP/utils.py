@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import re
 
-VECTOR_SEARCH_URI = "https://wd-vectordb.toolforge.org"
+VECTOR_SEARCH_URI = "https://wd-vectordb.wmcloud.org"
 
 
 async def keywordsearch(query: str,
