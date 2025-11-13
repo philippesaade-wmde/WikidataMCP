@@ -4,7 +4,9 @@ import pandas as pd
 import re
 
 VECTOR_SEARCH_URI = "https://wd-vectordb.wmcloud.org"
-
+WD_API_URI = "https://www.wikidata.org/w/api.php"
+WD_QUERY_URI = "https://query.wikidata.org/sparql"
+USER_AGENT = "Wikidata MCP Client"
 
 async def keywordsearch(query: str,
                         type: str = "item",
@@ -21,16 +23,19 @@ async def keywordsearch(query: str,
     Returns:
         list: A list of dictionaries representing the matching Wikidata items or properties, each containing "id", "label", and "description".
     """
+    params = {
+        "action": "wbsearchentities",
+        "type": type,
+        "search": query,
+        "limit": limit,
+        "language": lang,
+        "format": "json",
+        "origin": "*",
+    }
     response = requests.get(
-        "https://www.wikidata.org/w/api.php?"
-        "action=wbsearchentities&"
-        f"type={type}&"
-        f"search={query}&"
-        f"limit={limit}&"
-        f"language={lang}&"
-        "format=json&"
-        "origin=*",
-        headers={"User-Agent": "Wikidata MCP Client"},
+        WD_API_URI,
+        params=params,
+        headers={"User-Agent": USER_AGENT},
     )
     response.raise_for_status()
 
@@ -69,7 +74,7 @@ def vectorsearch_verify_apikey(x_api_key: str) -> bool:
             f"{VECTOR_SEARCH_URI}/item/query/?query=",
             headers={
                 "x-api-secret": x_api_key,
-                "User-Agent": "Wikidata MCP Client",
+                "User-Agent": USER_AGENT,
             },
         )
         return response.status_code != 401
@@ -101,7 +106,7 @@ async def vectorsearch(query: str,
         f"{VECTOR_SEARCH_URI}/{type}/query/?query={query}&k={limit}",
         headers={
             "x-api-secret": x_api_key,
-            "User-Agent": "Wikidata MCP Client",
+            "User-Agent": USER_AGENT,
         },
     )
     response.raise_for_status()
@@ -117,23 +122,20 @@ async def execute_sparql(sparql_query: str,
     """
     Execute a SPARQL query on Wikidata.
 
-    You may assume the following prefixes:
-    PREFIX wd: <http://www.wikidata.org/entity/>
-    PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-    PREFIX p: <http://www.wikidata.org/prop/>
-    PREFIX ps: <http://www.wikidata.org/prop/statement/>
-
     Args:
         sparql_query (str): The SPARQL query to execute.
 
     Returns:
         pandas.DataFrame: A cleaned dataframe of the results.
     """
-    url = "https://query.wikidata.org/sparql"
     params = urlencode({"query": sparql_query, "format": "json"})
-    encoded_url = url + "?" + params
-    headers = {"User-Agent": "Wikidata MCP Client"}
-    result = requests.get(encoded_url, headers=headers)
+    encoded_url = WD_QUERY_URI + "?" + params
+
+    result = requests.get(
+        encoded_url,
+        headers={"User-Agent": USER_AGENT},
+    )
+
     if result.status_code == 400:
         error_message = result.text.split("	at ")[0]
         raise ValueError(error_message)
@@ -142,9 +144,10 @@ async def execute_sparql(sparql_query: str,
     result_bindings = result.json()["results"]["bindings"]
     df = pd.json_normalize(result_bindings)
 
-    value_cols = {c: c.split(".")[0]
-                  for c in df.columns if c.endswith(".value")
-                  }
+    value_cols = {
+        c: c.split(".")[0]
+        for c in df.columns if c.endswith(".value")
+    }
     df = df[list(value_cols)].rename(columns=value_cols)
 
 
@@ -160,7 +163,8 @@ async def execute_sparql(sparql_query: str,
 def get_lang_specific(data, langs=['en', 'mul']) -> str:
     for lang in langs:
         if lang in data:
-            return data[lang].get('value', '')
+            if data[lang].get('value'):
+                return data[lang].get('value')
     return ''
 
 
@@ -178,18 +182,28 @@ async def get_entities_labels_and_descriptions(ids, lang='en') -> dict:
     if not ids:
         return {}
 
-    response = requests.get(
-        "https://www.wikidata.org/w/api.php?"
-        "action=wbgetentities&"
-        f"ids={'|'.join(ids)}&"
-        f"languages={lang}&"
-        "props=labels|descriptions&"
-        "format=json&"
-        "origin=*",
-        headers={"User-Agent": "Wikidata MCP Client"},
-    )
-    response.raise_for_status()
-    entities_data = response.json().get("entities", {})
+    entities_data = {}
+
+    # Wikidata API has a limit on the number of IDs per request,
+    # typically 50 for wbgetentities.
+    for chunk_idx in range(0, len(ids), 50):
+        ids_chunk = ids[chunk_idx:chunk_idx+50]
+        params = {
+            "action": "wbgetentities",
+            "ids": "|".join(ids_chunk),
+            "languages": lang+"|mul|en",
+            "props": "labels|descriptions",
+            "format": "json",
+            "origin": "*",
+        }
+        response = requests.get(
+            WD_API_URI,
+            params=params,
+            headers={"User-Agent": USER_AGENT},
+        )
+        response.raise_for_status()
+        chunk_data = response.json().get("entities", {})
+        entities_data = entities_data | chunk_data
 
     entities_dict = {
         id:
@@ -225,23 +239,62 @@ async def get_entities_triplets(ids: list[str],
 
     info = {}
     for id in ids:
+        params = {
+            "id": id,
+            "external_ids": external_ids,
+            "all_ranks": all_ranks,
+            "lang": lang,
+            "format": "triplet",
+        }
         response = requests.get(
-            "https://wd-textify.toolforge.org?"
-            f"id={id}&"
-            f"external_ids={external_ids}&"
-            f"all_ranks={all_ranks}&"
-            f"lang={lang}&"
-            "format=triplet",
-            headers={"User-Agent": "Wikidata MCP Client"},
+            "https://wd-textify.toolforge.org",
+            params=params,
+            headers={"User-Agent": USER_AGENT},
         )
         response.raise_for_status()
         info[id] = response.json()
 
     return info
 
+async def get_claims(qid: str,
+                    pid: str,
+                    lang: str = 'en') -> dict:
+    """
+    Fetches claim values for a given Wikidata QID and PID.
+
+    Args:
+        qid (str): The Wikidata QID to fetch claim data for.
+        pid (str): The Wikidata PID to fetch claim data for.
+        lang (str, optional): Language code available on Wikidata. Default to en.
+
+    Returns:
+        dict: A dictionary where keys are entity IDs and values are their RDF triplet representations as strings.
+    """
+    if not id:
+        return {}
+
+    params = {
+        "action": "wbgetclaims",
+        "entity": qid,
+        "property": pid,
+        "format": "json",
+        "origin": "*",
+    }
+    response = requests.get(
+        WD_API_URI,
+        params=params,
+        headers={"User-Agent": USER_AGENT},
+    )
+    response.raise_for_status()
+    entities_data = response.json().get("claims", {})
+
+    entities_data = [c['mainsnak']['datavalue']['value'] \
+     for c in entities_data.get(pid, []) \
+        if 'mainsnak' in c]
+    return entities_data
 
 async def get_triplet_values(ids: list[str],
-                            pid: str,
+                            pid: list[str],
                             external_ids: bool = False,
                             all_ranks: bool = False,
                             references: bool = False,
@@ -265,21 +318,89 @@ async def get_triplet_values(ids: list[str],
 
     info = {}
     for id in ids:
+        params = {
+            "id": id,
+            "external_ids": external_ids,
+            "all_ranks": all_ranks,
+            "references": references,
+            "lang": lang,
+            "pid": ','.join(pid),
+            "format": "json",
+        }
         response = requests.get(
-            "https://wd-textify.toolforge.org?"
-            f"id={id}&"
-            f"external_ids={external_ids}&"
-            f"all_ranks={all_ranks}&"
-            f"references={references}&"
-            f"lang={lang}&"
-            f"pid={pid or ''}&"
-            "format=json",
-            headers={"User-Agent": "Wikidata MCP Client"},
+            "https://wd-textify.toolforge.org",
+            params=params,
+            headers={"User-Agent": USER_AGENT},
         )
         response.raise_for_status()
         info[id] = response.json()
 
     return info
+
+async def get_hierarchy_data(qid: str,
+                       max_depth: int = 5,
+                       lang: str = 'en') -> dict:
+    """
+    Fetches hierarchical data for a given Wikidata QID.
+
+    Args:
+        qid (str): The Wikidata QID to fetch hierarchical data for.
+        max_depth (int, optional): Maximum depth of the hierarchy to retrieve. Defaults to 5.
+        lang (str, optional): Language code available on Wikidata. Default to en.
+
+    Returns:
+        dict: A dictionary representing the hierarchical data.
+    """
+    qids = [qid]
+    hierarchical_data = {}
+    level = 0
+
+    while qids and level <= max_depth:
+        new_qids = set()
+
+        for qid in qids:
+            instanceof = await get_claims(qid, 'P31')
+            subclassof = await get_claims(qid, 'P279')
+            instanceof_qids = [c['id'] for c in instanceof if 'id' in c]
+            subclassof_qids = [c['id'] for c in subclassof if 'id' in c]
+
+            hierarchical_data[qid] = {
+                'instanceof': instanceof_qids,
+                'subclassof': subclassof_qids
+            }
+
+            new_qids = new_qids | \
+                set(instanceof_qids) | \
+                set(subclassof_qids)
+
+        qids = new_qids - set(hierarchical_data.keys()) - set({None})
+        level += 1
+
+    qids = list(hierarchical_data.keys())
+    labels = await get_entities_labels_and_descriptions(qids, lang=lang)
+    for qid, label in labels.items():
+        hierarchical_data[qid]['label'] = label['label']
+
+    return hierarchical_data
+
+def hierarchy_to_json(qid, data, level=5):
+    if level <= 0:
+        return f"{data[qid]['label']} ({qid})"
+
+    return {
+        f"{data[qid]['label']} ({qid})": {
+            "instance of (P31)": [
+                hierarchy_to_json(i_qid, data, level-1) \
+                    for i_qid in data[qid]['instanceof'] \
+                        if (i_qid in data)
+            ],
+            "subclass of (P279)": [
+                hierarchy_to_json(i_qid, data, level-1) \
+                    for i_qid in data[qid]['subclassof'] \
+                        if (i_qid in data)
+            ]
+        }
+    }
 
 def stringify(value) -> str:
     if isinstance(value, dict):
@@ -288,6 +409,8 @@ def stringify(value) -> str:
                 [stringify(v.get('value', {})) \
                     for v in value['values']]
             )
+        if 'value' in value:
+            return stringify(value['value'])
         if 'string' in value:
             return value['string']
         if 'QID' in value:
@@ -297,3 +420,53 @@ def stringify(value) -> str:
         if 'amount' in value:
             return f"{value.get('amount')} {value.get('unit', '')}".strip()
     return str(value)
+
+def triplet_values_to_string(entity_id: str,
+                             property_id: str,
+                             entity: dict) -> str:
+    """
+    Converts triplet values of a Wikidata statement into a human-readable string format.
+
+    Args:
+        entity_id (str): The Wikidata entity ID (QID).
+        property_id (str): The Wikidata property ID (PID).
+        entity (dict): The triplet data of the entity.
+
+    Returns:
+        str: A formatted string representing the triplet values, qualifiers, and references.
+    """
+    claims = entity.get("claims")
+    if not claims:
+        return None
+
+    output = ""
+    for claim in claims:
+        for claim_value in claim.get("values", []):
+            if output:
+                output += "\n"
+
+            output += f"{entity['label']} ({entity_id}): "
+            output += f"{claim['property_label']} ({property_id}): "
+            output += f"{stringify(claim_value['value'])}\n"
+
+            output += f"  Rank: {claim_value.get('rank', 'normal')}\n"
+
+            qualifiers = claim_value.get("qualifiers", [])
+            if qualifiers:
+                output += f"  Qualifier:\n"
+                for qualifier in qualifiers:
+                    output += f"    - {qualifier['property_label']} ({qualifier['PID']}): "
+                    output += stringify(qualifier)
+                    output += "\n"
+
+            references = claim_value.get("references", [])
+            if references:
+                i = 1
+                for reference in references:
+                    output += f"  Reference {i}:\n"
+                    for reference_claim in reference:
+                        output += f"    - {reference_claim['property_label']} ({reference_claim['PID']}): "
+                        output += stringify(reference_claim)
+                        output += "\n"
+                    i += 1
+    return output.strip()

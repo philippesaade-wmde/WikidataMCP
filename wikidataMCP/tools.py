@@ -1,6 +1,7 @@
 from fastmcp import FastMCP
 from wikidataMCP import utils
 import os
+import json
 
 mcp = FastMCP("Wikidata MCP")
 
@@ -211,7 +212,7 @@ async def get_claim_values(entity_id: str,
 
     result = await utils.get_triplet_values(
         [entity_id],
-        pid=property_id,
+        pid=[property_id],
         external_ids=True,
         references=True,
         all_ranks=True,
@@ -222,47 +223,75 @@ async def get_claim_values(entity_id: str,
     if not entity:
         return f"Entity {entity_id} not found"
 
-    claims = entity.get("claims")
-    if not claims:
+    text = utils.triplet_values_to_string(entity_id, property_id, entity)
+    if not text:
         return f"No statement found for {entity_id} with property {property_id}"
+    return text
 
-    output = ""
-    for claim in claims:
-        for claim_value in claim.get("values", []):
-            if output:
-                output += "\n"
 
-            output += f"{entity['label']} ({entity_id}): "
-            output += f"{claim['property_label']} ({property_id}): "
-            output += f"{utils.stringify(claim_value['value'])}\n"
+@mcp.tool()
+async def get_instance_and_class_hierarchy(entity_id: str,
+                            max_depth: int = 5,
+                            lang: str = 'en') -> str:
+    """Expose the hierarchical context of a Wikidata entity to inspect its ontological placement. This tool retrieves hierarchical relationships based on "instance of" (P31) and "subclass of" (P279) properties.
 
-            output += f"  Rank: {claim_value.get('rank', 'normal')}\n"
+    Args:
+        entity_id: A QID or PID such as "Q42" or "P31".
+        max_depth: Maximum depth of the hierarchy to retrieve. Defaults to 5.
+        lang: Language code for labels and descriptions (default: 'en').
 
-            qualifiers = claim_value.get("qualifiers", [])
-            if qualifiers:
-                output += f"  Qualifier:\n"
-                for qualifier in qualifiers:
-                    output += f"    - {qualifier['property_label']} ({qualifier['PID']}): "
-                    output += utils.stringify(qualifier)
-                    output += "\n"
+    Returns:
+        JSON-formatted hierarchical data showing the entity's placement in the ontology.
 
-            references = claim_value.get("references", [])
-            if references:
-                i = 1
-                for reference in references:
-                    output += f"  Reference {i}:\n"
-                    for reference_claim in reference:
-                        output += f"    - {reference_claim['property_label']} ({reference_claim['PID']}): "
-                        output += utils.stringify(reference_claim)
-                        output += "\n"
-                    i += 1
+    Example:
+        >>> get_instance_and_class_hierarchy("Q42", max_depth=2)
+        {
+          "Douglas Adams (Q42)": {
+            "instanceof": [
+              {
+                "human (Q5)": {
+                    "instanceof": ["biological organism (Q215627)"],
+                    "subclassof": ["mammal (Q729)"]
+                }
+              }
+            ],
+            "subclassof": []
+          }
+        }
+    """
 
-    return output.strip()
+    result = await utils.get_hierarchy_data(entity_id, max_depth, lang=lang)
+    result = utils.hierarchy_to_json(entity_id, result, level=max_depth)
+    return json.dumps(result, indent=2)
 
 
 @mcp.tool()
 async def execute_sparql(sparql: str, K: int = 10) -> str:
     """Execute a SPARQL query against Wikidata and return up to K rows as CSV.
+
+    Tips:
+        • Use the search and entity tools first to discover relevant QIDs and PIDs before writing a SPARQL query.
+
+        • For class-based filtering, use:
+            wdt:P31/wdt:P279*
+            This expands both instance-of and subclass-of relationships.
+            Use the get_instance_and_class_hierarchy tool to verify which class ID makes sense.
+
+        • Add the label service to display readable names instead of QIDs:
+            SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en,mul". }
+
+        • Filtering by date:
+            ?item wdt:P569 ?date.
+            FILTER(YEAR(?date) = 1998 && MONTH(?date) = 11 && DAY(?date) = 28)
+            This example filters by exact day.
+
+        • Getting normalized quantity values:
+            ?item p:P2048 ?statement. # P2048 = height
+            ?statement a wikibase:BestRank;
+                psn:P2048 ?valueNode.
+            ?valueNode wikibase:quantityUnit wd:Q11573; # unit in metres
+                wikibase:quantityAmount ?height.
+            This ensures all values are normalized and comparable across items.
 
     Args:
         sparql: A valid SPARQL string.
