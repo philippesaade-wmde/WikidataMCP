@@ -1,4 +1,6 @@
 from fastmcp import FastMCP
+from fastmcp import Context
+from fastmcp.server.dependencies import get_http_headers
 from wikidataMCP import utils
 import os
 import json
@@ -33,7 +35,8 @@ if VECTOR_ENABLED:
         results = await utils.vectorsearch(
             query,
             WD_VECTORDB_API_SECRET,
-            lang=lang
+            lang=lang,
+            user_agent=get_http_headers().get("User-Agent")
         )
 
         text_val = [
@@ -67,7 +70,8 @@ if VECTOR_ENABLED:
             query,
             WD_VECTORDB_API_SECRET,
             type="property",
-            lang=lang
+            lang=lang,
+            user_agent=get_http_headers().get("User-Agent")
         )
 
         text_val = [
@@ -101,11 +105,11 @@ async def keyword_search_items(query: str, lang: str = 'en') -> str:
         Q42: Douglas Adams — English science fiction writer and humorist
         Q28421831: Douglas Adams — American environmental engineer
     """
-
     results = await utils.keywordsearch(
         query,
         type="item",
-        lang=lang
+        lang=lang,
+        user_agent=get_http_headers().get("User-Agent")
     )
 
     text_val = [
@@ -138,7 +142,8 @@ async def keyword_search_properties(query: str, lang: str = 'en') -> str:
     results = await utils.keywordsearch(
         query,
         type="property",
-        lang=lang
+        lang=lang,
+        user_agent=get_http_headers().get("User-Agent")
     )
 
     text_val = [
@@ -174,7 +179,8 @@ async def get_entity_claims(entity_id: str,
         [entity_id],
         external_ids=include_external_ids,
         all_ranks=False,
-        lang=lang
+        lang=lang,
+        user_agent=get_http_headers().get("User-Agent")
     )
     return result.get(entity_id, f"Entity {entity_id} not found")
 
@@ -191,7 +197,7 @@ async def get_claim_values(entity_id: str,
         lang: Language code for labels and descriptions (default: 'en').
 
     Returns:
-        Complete claim details with hierarchical structure showing:
+        Complete statement details showing:
           Entity (QID): Property (PID): Value (QID or literal)
           Rank: preferred/normal/deprecated
           Qualifier:
@@ -216,7 +222,8 @@ async def get_claim_values(entity_id: str,
         external_ids=True,
         references=True,
         all_ranks=True,
-        lang=lang
+        lang=lang,
+        user_agent=get_http_headers().get("User-Agent")
     )
 
     entity = result.get(entity_id)
@@ -275,7 +282,7 @@ async def execute_sparql(sparql: str, K: int = 10) -> str:
         • For class-based filtering, use:
             wdt:P31/wdt:P279*
             This expands both instance-of and subclass-of relationships.
-            Use the get_instance_and_class_hierarchy tool to verify which class ID makes sense.
+            Use the get_instance_and_class_hierarchy tool to verify which class ID to filter on.
 
         • Add the label service to display readable names instead of QIDs:
             SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en,mul". }
@@ -308,7 +315,11 @@ async def execute_sparql(sparql: str, K: int = 10) -> str:
     """
 
     try:
-        result = await utils.execute_sparql(sparql, K=K)
+        result = await utils.execute_sparql(
+            sparql,
+            K=K,
+            user_agent=get_http_headers().get("User-Agent")
+        )
     except ValueError as e:
         return str(e)
 

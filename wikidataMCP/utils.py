@@ -11,7 +11,8 @@ USER_AGENT = "Wikidata MCP Client"
 async def keywordsearch(query: str,
                         type: str = "item",
                         limit: int = 10,
-                        lang: str = 'en') -> list:
+                        lang: str = 'en',
+                        user_agent = '') -> list:
     """
     Searches for Wikidata items or properties that match the input text.
 
@@ -35,7 +36,7 @@ async def keywordsearch(query: str,
     response = requests.get(
         WD_API_URI,
         params=params,
-        headers={"User-Agent": USER_AGENT},
+        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"}
     )
     response.raise_for_status()
 
@@ -86,7 +87,8 @@ async def vectorsearch(query: str,
                        x_api_key: str,
                        type: str = "item",
                        limit: int = 10,
-                       lang: str = 'en') -> list:
+                       lang: str = 'en',
+                       user_agent = '') -> list:
     """
     Searches for Wikidata items or properties similar to the input text using a vector database.
 
@@ -106,7 +108,7 @@ async def vectorsearch(query: str,
         f"{VECTOR_SEARCH_URI}/{type}/query/?query={query}&k={limit}",
         headers={
             "x-api-secret": x_api_key,
-            "User-Agent": USER_AGENT,
+            "User-Agent": f"{USER_AGENT} ({user_agent})"
         },
     )
     response.raise_for_status()
@@ -118,7 +120,8 @@ async def vectorsearch(query: str,
     return entities_dict
 
 async def execute_sparql(sparql_query: str,
-                         K: int = 10) -> pd.DataFrame:
+                         K: int = 10,
+                         user_agent = '') -> pd.DataFrame:
     """
     Execute a SPARQL query on Wikidata.
 
@@ -133,7 +136,7 @@ async def execute_sparql(sparql_query: str,
 
     result = requests.get(
         encoded_url,
-        headers={"User-Agent": USER_AGENT},
+        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"}
     )
 
     if result.status_code == 400:
@@ -221,7 +224,8 @@ async def get_entities_labels_and_descriptions(ids, lang='en') -> dict:
 async def get_entities_triplets(ids: list[str],
                                 external_ids: bool = False,
                                 all_ranks: bool = False,
-                                lang: str = 'en') -> dict:
+                                lang: str = 'en',
+                                user_agent = '') -> dict:
     """
     Fetches triplet representations for claims of a list of Wikidata entity IDs.
 
@@ -237,22 +241,20 @@ async def get_entities_triplets(ids: list[str],
     if not ids:
         return {}
 
-    info = {}
-    for id in ids:
-        params = {
-            "id": id,
-            "external_ids": external_ids,
-            "all_ranks": all_ranks,
-            "lang": lang,
-            "format": "triplet",
-        }
-        response = requests.get(
-            "https://wd-textify.toolforge.org",
-            params=params,
-            headers={"User-Agent": USER_AGENT},
-        )
-        response.raise_for_status()
-        info[id] = response.json()
+    params = {
+        "id": ','.join(ids),
+        "external_ids": external_ids,
+        "all_ranks": all_ranks,
+        "lang": lang,
+        "format": "triplet",
+    }
+    response = requests.get(
+        "https://wd-textify.toolforge.org",
+        params=params,
+        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"}
+    )
+    response.raise_for_status()
+    info = response.json()
 
     return info
 
@@ -298,7 +300,8 @@ async def get_triplet_values(ids: list[str],
                             external_ids: bool = False,
                             all_ranks: bool = False,
                             references: bool = False,
-                            lang: str = 'en') -> dict:
+                            lang: str = 'en',
+                            user_agent = '') -> dict:
     """
     Fetches triplet representations for claims of a list of Wikidata entity IDs.
 
@@ -316,24 +319,22 @@ async def get_triplet_values(ids: list[str],
     if not ids:
         return {}
 
-    info = {}
-    for id in ids:
-        params = {
-            "id": id,
-            "external_ids": external_ids,
-            "all_ranks": all_ranks,
-            "references": references,
-            "lang": lang,
-            "pid": ','.join(pid),
-            "format": "json",
-        }
-        response = requests.get(
-            "https://wd-textify.toolforge.org",
-            params=params,
-            headers={"User-Agent": USER_AGENT},
-        )
-        response.raise_for_status()
-        info[id] = response.json()
+    params = {
+        "id": ','.join(ids),
+        "external_ids": external_ids,
+        "all_ranks": all_ranks,
+        "references": references,
+        "lang": lang,
+        "pid": ','.join(pid),
+        "format": "json",
+    }
+    response = requests.get(
+        "https://wd-textify.toolforge.org",
+        params=params,
+        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"}
+    )
+    response.raise_for_status()
+    info = response.json()
 
     return info
 
@@ -353,16 +354,36 @@ async def get_hierarchy_data(qid: str,
     """
     qids = [qid]
     hierarchical_data = {}
+    label_data = {}
     level = 0
 
     while qids and level <= max_depth:
         new_qids = set()
 
+        current_data = await get_triplet_values(qids,
+                                          pid=['P31', 'P279'],
+                                          lang=lang)
+        if len(qids) == 1:
+            current_data = {qid: current_data}
+
+        print(current_data)
+
         for qid in qids:
-            instanceof = await get_claims(qid, 'P31')
-            subclassof = await get_claims(qid, 'P279')
-            instanceof_qids = [c['id'] for c in instanceof if 'id' in c]
-            subclassof_qids = [c['id'] for c in subclassof if 'id' in c]
+            if qid not in current_data:
+                continue
+
+            instanceof = [c['values'] \
+                          for c in current_data[qid]['claims'] \
+                            if c['PID'] == 'P31']
+            instanceof = [v['value'] for v in instanceof[0]] if instanceof else []
+
+            subclassof = [c['values'] \
+                          for c in current_data[qid]['claims'] \
+                            if c['PID'] == 'P279']
+            subclassof = [v['value'] for v in subclassof[0]] if subclassof else []
+
+            instanceof_qids = [v.get('QID', v.get('PID')) for v in instanceof]
+            subclassof_qids = [v.get('QID', v.get('PID')) for v in subclassof]
 
             hierarchical_data[qid] = {
                 'instanceof': instanceof_qids,
@@ -373,13 +394,20 @@ async def get_hierarchy_data(qid: str,
                 set(instanceof_qids) | \
                 set(subclassof_qids)
 
+            for v in instanceof + subclassof:
+                if 'QID' in v:
+                    label_data[v['QID']] = v.get('label', '')
+                elif 'PID' in v:
+                    label_data[v['PID']] = v.get('label', '')
+            label_data[qid] = current_data[qid].get('label', '')
+
         qids = new_qids - set(hierarchical_data.keys()) - set({None})
         level += 1
 
     qids = list(hierarchical_data.keys())
-    labels = await get_entities_labels_and_descriptions(qids, lang=lang)
-    for qid, label in labels.items():
-        hierarchical_data[qid]['label'] = label['label']
+    for qid, label in label_data.items():
+        if qid in hierarchical_data:
+            hierarchical_data[qid]['label'] = label
 
     return hierarchical_data
 
