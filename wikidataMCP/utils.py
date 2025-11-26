@@ -336,6 +336,8 @@ async def get_triplet_values(ids: list[str],
     response.raise_for_status()
     info = response.json()
 
+    if len(ids) == 1:
+        info = {ids[0]: info}
     return info
 
 async def get_hierarchy_data(qid: str,
@@ -363,10 +365,6 @@ async def get_hierarchy_data(qid: str,
         current_data = await get_triplet_values(qids,
                                           pid=['P31', 'P279'],
                                           lang=lang)
-        if len(qids) == 1:
-            current_data = {qid: current_data}
-
-        print(current_data)
 
         for qid in qids:
             if qid not in current_data:
