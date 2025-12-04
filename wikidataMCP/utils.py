@@ -155,7 +155,7 @@ async def execute_sparql(sparql_query: str,
     print(df)
 
     def shorten(val: str) -> str:
-        if pd.isna(val):
+        if not isinstance(val, str):
             return val
         URI_RE = re.compile(r"http://www\.wikidata\.org/entity/([A-Z]\d+)$")
         match = URI_RE.match(val)
