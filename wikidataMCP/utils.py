@@ -152,9 +152,11 @@ async def execute_sparql(sparql_query: str,
         for c in df.columns if c.endswith(".value")
     }
     df = df[list(value_cols)].rename(columns=value_cols)
-
+    print(df)
 
     def shorten(val: str) -> str:
+        if pd.isna(val):
+            return val
         URI_RE = re.compile(r"http://www\.wikidata\.org/entity/([A-Z]\d+)$")
         match = URI_RE.match(val)
         return match.group(1) if match else val
