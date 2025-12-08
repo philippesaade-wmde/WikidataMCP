@@ -258,6 +258,8 @@ async def get_entities_triplets(ids: list[str],
     response.raise_for_status()
     info = response.json()
 
+    if len(ids) == 1:
+        info = {ids[0]: info}
     return info
 
 async def get_claims(qid: str,

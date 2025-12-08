@@ -182,6 +182,10 @@ async def get_entity_claims(entity_id: str,
         lang=lang,
         user_agent=get_http_headers().get("User-Agent")
     )
+
+    if not result:
+        return f"Entity {entity_id} not found"
+
     return result.get(entity_id, f"Entity {entity_id} not found")
 
 
@@ -225,6 +229,9 @@ async def get_claim_values(entity_id: str,
         lang=lang,
         user_agent=get_http_headers().get("User-Agent")
     )
+
+    if not result:
+        return f"Entity {entity_id} not found"
 
     entity = result.get(entity_id)
     if not entity:
