@@ -15,8 +15,8 @@ if VECTOR_ENABLED:
 
     @mcp.tool()
     async def search_items(query: str, lang: str = 'en') -> str:
-        """Search Wikidata items (QIDs) using semantic search trained on question-answering.
-        Find conceptually similar Wikidata items from a natural-language query. Matches are based on meaning, not exact words.
+        """Search Wikidata items (QIDs) using vector and keyword search.
+        Find conceptually similar Wikidata items from a natural-language query. Matches are based on meaning and exact words.
 
         Args:
             query: Natural-language description of the concept to find.
@@ -56,8 +56,8 @@ if VECTOR_ENABLED:
 
     @mcp.tool()
     async def search_properties(query: str, lang: str = 'en') -> str:
-        """Search Wikidata properties (PIDs) using semantic search trained on question-answering.
-        Find relevant Wikidata properties from a natural-language description of the relationship you need. Matches are based on meaning, not exact words.
+        """Search Wikidata properties (PIDs) using vector and keyword search.
+        Find relevant Wikidata properties from a natural-language description of the relationship you need. Matches are based on meaning and exact words.
 
         Args:
             query: Natural-language description of the concept to find.
@@ -298,7 +298,7 @@ async def get_instance_and_class_hierarchy(entity_id: str,
 async def execute_sparql(sparql: str, K: int = 10) -> str:
     """Execute a SPARQL query against Wikidata and return up to K rows as CSV.
 
-    IMPORTANT: All QIDs (items) and PIDs (properties) are randomly shuffled, so you cannot rely on any prior knowledge of Wikidata identifiers or schema. The only way to retrieve information is by using the provided search and get tools. Executing SPARQL before discovering QIDs and PIDs will be considered a failure.
+    IMPORTANT: All QIDs (items) and PIDs (properties) are randomly shuffled, so you cannot rely on any prior knowledge of Wikidata identifiers or schema. The only way to retrieve information is by using the provided search and get tools prior to executing SPARQL.
 
     Tips:
         • Use the search and entity tools first to discover relevant QIDs and PIDs before writing a SPARQL query.
