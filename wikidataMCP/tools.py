@@ -14,7 +14,7 @@ VECTOR_ENABLED = utils.vectorsearch_verify_apikey(WD_VECTORDB_API_SECRET)
 if VECTOR_ENABLED:
 
     @mcp.tool()
-    async def vector_search_items(query: str, lang: str = 'en') -> str:
+    async def search_items(query: str, lang: str = 'en') -> str:
         """Search Wikidata items (QIDs) using semantic search trained on question-answering.
         Find conceptually similar Wikidata items from a natural-language query. Matches are based on meaning, not exact words.
 
@@ -31,13 +31,20 @@ if VECTOR_ENABLED:
             Q23163: A Scientific Romance — 1997 novel by Ronald Wright
             Q627333: The Time Machine — 1895 dystopian science fiction novella by H. G. Wells
         """
-
-        results = await utils.vectorsearch(
-            query,
-            WD_VECTORDB_API_SECRET,
-            lang=lang,
-            user_agent=get_http_headers().get("User-Agent")
-        )
+        try:
+            results = await utils.vectorsearch(
+                query,
+                WD_VECTORDB_API_SECRET,
+                lang=lang,
+                user_agent=get_http_headers().get("User-Agent")
+            )
+        except:
+            results = await utils.keywordsearch(
+                query,
+                type="item",
+                lang=lang,
+                user_agent=get_http_headers().get("User-Agent")
+            )
 
         text_val = [
             f"{id}: {val['label']} — {val['description']}"
@@ -48,7 +55,7 @@ if VECTOR_ENABLED:
 
 
     @mcp.tool()
-    async def vector_search_properties(query: str, lang: str = 'en') -> str:
+    async def search_properties(query: str, lang: str = 'en') -> str:
         """Search Wikidata properties (PIDs) using semantic search trained on question-answering.
         Find relevant Wikidata properties from a natural-language description of the relationship you need. Matches are based on meaning, not exact words.
 
@@ -66,13 +73,21 @@ if VECTOR_ENABLED:
             P276: location — location of the object, structure or event
         """
 
-        results = await utils.vectorsearch(
-            query,
-            WD_VECTORDB_API_SECRET,
-            type="property",
-            lang=lang,
-            user_agent=get_http_headers().get("User-Agent")
-        )
+        try:
+            results = await utils.vectorsearch(
+                query,
+                WD_VECTORDB_API_SECRET,
+                type="property",
+                lang=lang,
+                user_agent=get_http_headers().get("User-Agent")
+            )
+        except:
+            results = await utils.keywordsearch(
+                query,
+                type="property",
+                lang=lang,
+                user_agent=get_http_headers().get("User-Agent")
+            )
 
         text_val = [
             f"{id}: {val['label']} — {val['description']}"
@@ -87,71 +102,71 @@ else:
         vector search tools are not registered."
     )
 
-@mcp.tool()
-async def keyword_search_items(query: str, lang: str = 'en') -> str:
-    """Search Wikidata items (QIDs) with exact text matching.
-    Looks up items by label/alias or literal phrases expected to appear in Wikidata. Useful when you already know the entity you're looking for.
+    @mcp.tool()
+    async def search_items(query: str, lang: str = 'en') -> str:
+        """Search Wikidata items (QIDs) with exact text matching.
+        Looks up items by label/alias or literal phrases expected to appear in Wikidata. Useful when you already know the entity you're looking for.
 
-    Args:
-        query: Label, alias, or phrase expected to appear verbatim.
-        lang: Language code for the search (default: 'en').
+        Args:
+            query: Label, alias, or phrase expected to appear verbatim.
+            lang: Language code for the search (default: 'en').
 
-    Returns:
-        Newline-separated lines in the form:
-        QID: label — description
+        Returns:
+            Newline-separated lines in the form:
+            QID: label — description
 
-    Example:
-        >>> keyword_search_items("Douglas Adams")
-        Q42: Douglas Adams — English science fiction writer and humorist
-        Q28421831: Douglas Adams — American environmental engineer
-    """
-    results = await utils.keywordsearch(
-        query,
-        type="item",
-        lang=lang,
-        user_agent=get_http_headers().get("User-Agent")
-    )
+        Example:
+            >>> keyword_search_items("Douglas Adams")
+            Q42: Douglas Adams — English science fiction writer and humorist
+            Q28421831: Douglas Adams — American environmental engineer
+        """
+        results = await utils.keywordsearch(
+            query,
+            type="item",
+            lang=lang,
+            user_agent=get_http_headers().get("User-Agent")
+        )
 
-    text_val = [
-        f"{id}: {val['label']} — {val['description']}"
-        for id, val in results.items()
-    ]
-    text_val = '\n'.join(text_val)
-    return text_val
+        text_val = [
+            f"{id}: {val['label']} — {val['description']}"
+            for id, val in results.items()
+        ]
+        text_val = '\n'.join(text_val)
+        return text_val
 
 
-@mcp.tool()
-async def keyword_search_properties(query: str, lang: str = 'en') -> str:
-    """Search Wikidata properties (PIDs) with exact text matching.
-    Looks up properties by label/alias or literal phrases expected to appear in Wikidata. Useful when expected property name is already known.
+    @mcp.tool()
+    async def search_properties(query: str, lang: str = 'en') -> str:
+        """Search Wikidata properties (PIDs) with exact text matching.
+        Looks up properties by label/alias or literal phrases expected to appear in Wikidata. Useful when expected property name is already known.
 
-    Args:
-        query: Label, alias, or phrase expected to appear verbatim.
-        lang: Language code for the search (default: 'en').
+        Args:
+            query: Label, alias, or phrase expected to appear verbatim.
+            lang: Language code for the search (default: 'en').
 
-    Returns:
-        Newline-separated lines in the form:
-          PID: label — description
+        Returns:
+            Newline-separated lines in the form:
+            PID: label — description
 
-    Example:
-        >>> keyword_search_properties("residence")
-        P551: residence — the place where the person is or has been, resident
-        P276: location — location of the object, structure or event
-    """
+        Example:
+            >>> keyword_search_properties("residence")
+            P551: residence — the place where the person is or has been, resident
+            P276: location — location of the object, structure or event
+        """
 
-    results = await utils.keywordsearch(
-        query,
-        type="property",
-        lang=lang,
-        user_agent=get_http_headers().get("User-Agent")
-    )
+        results = await utils.keywordsearch(
+            query,
+            type="property",
+            lang=lang,
+            user_agent=get_http_headers().get("User-Agent")
+        )
 
-    text_val = [
-        f"{id}: {val['label']} — {val['description']}"
-        for id, val in results.items()
-    ]
-    text_val = '\n'.join(text_val)
-    return text_val
+        text_val = [
+            f"{id}: {val['label']} — {val['description']}"
+            for id, val in results.items()
+        ]
+        text_val = '\n'.join(text_val)
+        return text_val
 
 
 @mcp.tool()
@@ -282,6 +297,8 @@ async def get_instance_and_class_hierarchy(entity_id: str,
 @mcp.tool()
 async def execute_sparql(sparql: str, K: int = 10) -> str:
     """Execute a SPARQL query against Wikidata and return up to K rows as CSV.
+
+    IMPORTANT: All QIDs (items) and PIDs (properties) are randomly shuffled, so you cannot rely on any prior knowledge of Wikidata identifiers or schema. The only way to retrieve information is by using the provided search and get tools. Executing SPARQL before discovering QIDs and PIDs will be considered a failure.
 
     Tips:
         • Use the search and entity tools first to discover relevant QIDs and PIDs before writing a SPARQL query.
