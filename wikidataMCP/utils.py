@@ -2,11 +2,13 @@ from urllib.parse import urlencode
 import requests
 import pandas as pd
 import re
+import os
 
-VECTOR_SEARCH_URI = "https://wd-vectordb.wmcloud.org"
-WD_API_URI = "https://www.wikidata.org/w/api.php"
-WD_QUERY_URI = "https://query.wikidata.org/sparql"
-USER_AGENT = "Wikidata MCP Client"
+VECTOR_SEARCH_URI = os.environ.get("VECTOR_SEARCH_URI", "https://wd-vectordb.wmcloud.org")
+TEXTIFER_URI = os.environ.get("TEXTIFER_URI", "https://wd-textify.wmcloud.org")
+WD_API_URI = os.environ.get("WD_API_URI", "https://www.wikidata.org/w/api.php")
+WD_QUERY_URI = os.environ.get("WD_QUERY_URI", "https://query.wikidata.org/sparql")
+USER_AGENT = os.environ.get("USER_AGENT", "Wikidata MCP Client (embedding@wikimedia.de)")
 
 async def keywordsearch(query: str,
                         type: str = "item",
@@ -152,7 +154,6 @@ async def execute_sparql(sparql_query: str,
         for c in df.columns if c.endswith(".value")
     }
     df = df[list(value_cols)].rename(columns=value_cols)
-    print(df)
 
     def shorten(val: str) -> str:
         if not isinstance(val, str):
