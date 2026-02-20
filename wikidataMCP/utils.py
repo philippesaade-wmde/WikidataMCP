@@ -10,6 +10,9 @@ WD_API_URI = os.environ.get("WD_API_URI", "https://www.wikidata.org/w/api.php")
 WD_QUERY_URI = os.environ.get("WD_QUERY_URI", "https://query.wikidata.org/sparql")
 USER_AGENT = os.environ.get("USER_AGENT", "Wikidata MCP Client (embedding@wikimedia.de)")
 
+REQUEST_TIMEOUT_SECONDS = float(os.environ.get("REQUEST_TIMEOUT_SECONDS", "15"))
+
+
 async def keywordsearch(query: str,
                         type: str = "item",
                         limit: int = 10,
@@ -38,7 +41,8 @@ async def keywordsearch(query: str,
     response = requests.get(
         WD_API_URI,
         params=params,
-        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"}
+        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"},
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
 
@@ -79,6 +83,7 @@ def vectorsearch_verify_apikey(x_api_key: str) -> bool:
                 "x-api-secret": x_api_key,
                 "User-Agent": USER_AGENT,
             },
+            timeout=REQUEST_TIMEOUT_SECONDS,
         )
         return response.status_code != 401
     except:
@@ -112,6 +117,7 @@ async def vectorsearch(query: str,
             "x-api-secret": x_api_key,
             "User-Agent": f"{USER_AGENT} ({user_agent})"
         },
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
 
@@ -138,7 +144,8 @@ async def execute_sparql(sparql_query: str,
 
     result = requests.get(
         encoded_url,
-        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"}
+        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"},
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
 
     if result.status_code == 400:
@@ -206,6 +213,7 @@ async def get_entities_labels_and_descriptions(ids, lang='en') -> dict:
             WD_API_URI,
             params=params,
             headers={"User-Agent": USER_AGENT},
+            timeout=REQUEST_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         chunk_data = response.json().get("entities", {})
@@ -227,6 +235,7 @@ async def get_entities_labels_and_descriptions(ids, lang='en') -> dict:
 async def get_entities_triplets(ids: list[str],
                                 external_ids: bool = False,
                                 all_ranks: bool = False,
+                                qualifiers: bool = True,
                                 lang: str = 'en',
                                 user_agent = '') -> dict:
     """
@@ -248,19 +257,19 @@ async def get_entities_triplets(ids: list[str],
         "id": ','.join(ids),
         "external_ids": external_ids,
         "all_ranks": all_ranks,
+        "qualifiers": qualifiers,
         "lang": lang,
         "format": "triplet",
     }
     response = requests.get(
-        "https://wd-textify.toolforge.org",
+        TEXTIFER_URI,
         params=params,
-        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"}
+        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"},
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     info = response.json()
 
-    if len(ids) == 1:
-        info = {ids[0]: info}
     return info
 
 async def get_claims(qid: str,
@@ -277,7 +286,7 @@ async def get_claims(qid: str,
     Returns:
         dict: A dictionary where keys are entity IDs and values are their RDF triplet representations as strings.
     """
-    if not id:
+    if not qid or not pid:
         return {}
 
     params = {
@@ -291,20 +300,25 @@ async def get_claims(qid: str,
         WD_API_URI,
         params=params,
         headers={"User-Agent": USER_AGENT},
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     entities_data = response.json().get("claims", {})
 
-    entities_data = [c['mainsnak']['datavalue']['value'] \
-     for c in entities_data.get(pid, []) \
-        if 'mainsnak' in c]
-    return entities_data
+    claim_values = []
+    for claim in entities_data.get(pid, []):
+        mainsnak = claim.get("mainsnak", {})
+        datavalue = mainsnak.get("datavalue", {})
+        if "value" in datavalue:
+            claim_values.append(datavalue["value"])
+    return claim_values
 
 async def get_triplet_values(ids: list[str],
                             pid: list[str],
                             external_ids: bool = False,
                             all_ranks: bool = False,
                             references: bool = False,
+                            qualifiers: bool = True,
                             lang: str = 'en',
                             user_agent = '') -> dict:
     """
@@ -329,20 +343,20 @@ async def get_triplet_values(ids: list[str],
         "external_ids": external_ids,
         "all_ranks": all_ranks,
         "references": references,
+        "qualifiers": qualifiers,
         "lang": lang,
         "pid": ','.join(pid),
         "format": "json",
     }
     response = requests.get(
-        "https://wd-textify.toolforge.org",
+        TEXTIFER_URI,
         params=params,
-        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"}
+        headers={"User-Agent": f"{USER_AGENT} ({user_agent})"},
+        timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     info = response.json()
 
-    if len(ids) == 1:
-        info = {ids[0]: info}
     return info
 
 async def get_hierarchy_data(qid: str,
@@ -477,7 +491,8 @@ def triplet_values_to_string(entity_id: str,
                 output += "\n"
 
             output += f"{entity['label']} ({entity_id}): "
-            output += f"{claim['property_label']} ({property_id}): "
+            claim_pid = claim.get("PID", property_id)
+            output += f"{claim['property_label']} ({claim_pid}): "
             output += f"{stringify(claim_value['value'])}\n"
 
             output += f"  Rank: {claim_value.get('rank', 'normal')}\n"

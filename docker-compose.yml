@@ -12,5 +12,7 @@ services:
       - WD_QUERY_URI
       - USER_AGENT
     container_name: wikidatamcp
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8000:8000"
