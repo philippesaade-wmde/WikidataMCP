@@ -15,7 +15,7 @@ from wikidataMCP import tools
 
 templates = Jinja2Templates(directory="templates")
 mcp = tools.mcp
-mcp_app = mcp.http_app(path="/mcp")
+mcp_app = mcp.http_app(path="/")
 
 
 app = FastAPI(
