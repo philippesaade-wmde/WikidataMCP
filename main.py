@@ -15,7 +15,7 @@ from wikidataMCP import tools
 
 templates = Jinja2Templates(directory="templates")
 mcp = tools.mcp
-mcp_app = mcp.http_app(path="/")
+mcp_app = mcp.http_app(path="/mcp")
 
 
 app = FastAPI(
@@ -103,6 +103,15 @@ def _register_tool_routes() -> None:
             summary=summary,
             description=description,
         )(endpoint)
+
+
+@app.middleware("http")
+async def normalize_mcp_path(request: Request, call_next):
+    if request.url.path == "/mcp":
+        scope = dict(request.scope)
+        scope["path"] = "/mcp/"
+        request = Request(scope, request.receive)
+    return await call_next(request)
 
 
 @app.get("/", include_in_schema=False)
