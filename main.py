@@ -26,11 +26,12 @@ app = FastAPI(
 )
 
 
-def _format_description(text: str | None) -> str | None:
-    if not text:
-        return None
-    # Remove docstring indentation and preserve visible line breaks in Swagger markdown.
-    return inspect.cleandoc(text).replace("\n", "  \n")
+@app.middleware("http")
+async def normalize_mcp_root_path(request: Request, call_next):
+    # Accept both /mcp and /mcp/ without relying on client-side redirect handling.
+    if request.scope.get("path") == "/mcp":
+        request.scope["path"] = "/mcp/"
+    return await call_next(request)
 
 
 def _build_endpoint_signature(fn: Any) -> inspect.Signature:
@@ -92,7 +93,7 @@ def _register_tool_routes() -> None:
         endpoint_signature = _build_endpoint_signature(fn)
         route_path = f"/tool/{tool_name}"
         summary = f"Run tool: {tool_name}"
-        description = _format_description(tool_obj.description)
+        description = inspect.cleandoc(tool_obj.description).replace("\n", "  \n")
         endpoint_name = f"api_tool_{tool_name}"
 
         endpoint = make_endpoint(fn, tool_name, endpoint_signature)
